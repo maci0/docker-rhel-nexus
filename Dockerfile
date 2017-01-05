@@ -37,6 +37,11 @@ LABEL io.k8s.description="The Nexus Repository Manager server \
 # Sonatype Labels
 LABEL com.sonatype.license="Apache License, Version 2.0"
 
+# SSL Password Arguments
+ARG KEY_STORE_PASSWORD
+ARG KEY_MANAGER_PASSWORD
+ARG TRUST_STORE_PASSWORD
+
 # Install Runtime Environment
 ENV JAVA_VERSION_MAJOR=8 \
     JAVA_VERSION_MINOR=102 \
@@ -53,12 +58,13 @@ RUN yum install -y --setopt=tsflags=nodocs curl tar && \
     yum clean all && \
     rm jdk-${JAVA_VERSION_MAJOR}u${JAVA_VERSION_MINOR}-linux-x64.rpm
 
-# Install Nexus
+# Configure Nexus Environment
 ENV SONATYPE_DIR=/opt/sonatype
+ENV NEXUS_HOME=${SONATYPE_DIR}/nexus \
+    SONATYPE_WORK=${SONATYPE_DIR}/sonatype-work
 ENV NEXUS_DATA=/nexus-data \
-    NEXUS_HOME=${SONATYPE_DIR}/nexus \
     NEXUS_VERSION=3.2.0-01 \
-    SONATYPE_WORK=${SONATYPE_DIR}/sonatype-work \
+    NEXUS_SSL=${NEXUS_HOME}/etc/ssl \
     NEXUS_CONTEXT='' \
     USER_NAME=nexus \
     USER_UID=200
@@ -72,8 +78,18 @@ RUN mkdir -p ${NEXUS_HOME} && \
     chown -R root:root ${NEXUS_HOME} && \
     \
     sed \
-      -e '/^nexus-context/ s:$:${NEXUS_CONTEXT}:' \
+      -e '/^nexus-args/ s:$:,${jetty.etc}/jetty-https.xml:' \
+      -e "/^nexus-context/ s:$:${NEXUS_CONTEXT}:" \
+      -e "/^application-port/a \
+            application-port-ssl=8443\
+        " \
       -i ${NEXUS_HOME}/etc/nexus-default.properties && \
+    \
+    sed \
+      -e "/\"KeyStorePassword\">/ s:>.*</Set>$:>${KEY_STORE_PASSWORD}</Set>:" \
+      -e "/\"KeyManagerPassword\">/ s:>.*</Set>$:>${KEY_MANAGER_PASSWORD}</Set>:" \
+      -e "/\"TrustStorePassword\">/ s:>.*</Set>$:>${TRUST_STORE_PASSWORD}</Set>:" \
+      -i ${NEXUS_HOME}/etc/jetty/jetty-https.xml && \
     \
     useradd -l -u ${USER_UID} -r -m -d ${NEXUS_DATA} -s /sbin/no-login \
             -c "${USER_NAME} application user" ${USER_NAME} && \
@@ -81,7 +97,7 @@ RUN mkdir -p ${NEXUS_HOME} && \
             ln -s ${NEXUS_DATA} ${SONATYPE_WORK}/nexus3 && \
             chown -R nexus:nexus ${NEXUS_DATA}
 
-VOLUME ${NEXUS_DATA}
+VOLUME ["${NEXUS_DATA}", "${NEXUS_SSL}"]
 
 # Supply non variable to USER command ${USER_NAME}
 USER nexus
@@ -91,6 +107,6 @@ WORKDIR /opt/sonatype/nexus
 ENV JAVA_MAX_MEM=1200m \
     JAVA_MIN_MEM=1200m
 
-EXPOSE 8081
+EXPOSE 8081 8443
 
 CMD ["bin/nexus", "run"]
