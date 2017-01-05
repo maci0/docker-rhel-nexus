@@ -23,7 +23,7 @@ LABEL name="Nexus Repository Manager" \
       summary="The Nexus Repository Manager server \
           with universal support for popular component formats." \
       run="docker run -d --name NAME \
-          -p 8081:8081 \
+          -p 8443:8443 \
           IMAGE" \
       stop="docker stop NAME"
 
@@ -31,7 +31,7 @@ LABEL name="Nexus Repository Manager" \
 LABEL io.k8s.description="The Nexus Repository Manager server \
           with universal support for popular component formats." \
       io.k8s.display-name="Nexus Repository Manager" \
-      io.openshift.expose-services="8081:8081" \
+      io.openshift.expose-services="8443:8443" \
       io.openshift.tags="Sonatype,Nexus"
 
 # Sonatype Labels
