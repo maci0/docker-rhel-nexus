@@ -58,7 +58,7 @@ ENV NEXUS_DATA=/nexus-data \
     SONATYPE_WORK=${SONATYPE_DIR}/sonatype-work \
     NEXUS_CONTEXT='' \
     USER_NAME=nexus \
-    USER_UID=200
+    USER_UID=1200
 
 # Install Nexus and Configure Nexus Runtime Environment
 RUN mkdir -p ${NEXUS_HOME} && \
